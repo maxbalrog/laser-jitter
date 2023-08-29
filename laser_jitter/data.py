@@ -24,7 +24,7 @@ class TimeSeries:
         '''
         self.series = series
         self.smooth_params = smooth_params
-        assert scaling in ['standard', 'minmax'], f"Only ['standard', 'minmax'] scalings are supported \\
+        assert scaling in ['standard', 'minmax'], f"Only ['standard', 'minmax'] scalings are supported \
         but you passed {scaling}"
         self.scaling = scaling
         self.train_size = train_size
@@ -38,11 +38,11 @@ class TimeSeries:
         return train, test
 
     def scale(self, series, scaler=None):
+        if series.ndim == 1:
+            series = series[:,np.newaxis]
         if scaler is None:
             scaler = StandardScaler() if self.scaling == 'standard' else MinMaxScaler((-1,1))
             scaler.fit(series)
-        if series.ndim == 1:
-            series = series[:,np.newaxis]
         series_scaled = scaler.transform(series)
         return series_scaled, scaler
 
@@ -75,6 +75,12 @@ class TimeSeries:
         self.train, self.test, self.scaler = data.values()
         results['unchanged'] = data
         return results
+
+    @staticmethod
+    def create_dataloaders(train, test, sequence_params, dataloader_params):
+        trainloader = create_dataloader(train, sequence_params, dataloader_params)
+        testloader = create_dataloader(test, sequence_params, dataloader_params)
+        return trainloader, testloader
 
 
 def generate_sequences(series, training_window, prediction_window, step=1):

@@ -83,8 +83,8 @@ class TimeSeries:
 
     @staticmethod
     def create_dataloaders(train, test, sequence_params, dataloader_params):
-        trainloader = create_dataloader(train, sequence_params, dataloader_params)
-        testloader = create_dataloader(test, sequence_params, dataloader_params)
+        trainloader = create_dataloader(train, sequence_params, dataloader_params, shuffle=True)
+        testloader = create_dataloader(test, sequence_params, dataloader_params, shuffle=False)
         return trainloader, testloader
 
     def transform_series(self, series):
@@ -176,9 +176,9 @@ class TimeSeriesSTFT:
     @staticmethod
     def create_dataloaders(train_real, train_imag, test_real, test_imag, sequence_params, dataloader_params):
         train = np.hstack([train_real, train_imag])
-        trainloader = create_dataloader(train, sequence_params, dataloader_params)
         test = np.hstack([test_real, test_imag])
-        testloader = create_dataloader(test, sequence_params, dataloader_params)
+        trainloader = create_dataloader(train, sequence_params, dataloader_params, shuffle=True)
+        testloader = create_dataloader(test, sequence_params, dataloader_params, shuffle=False)
         return trainloader, testloader
 
     def transform_series(self, series):
@@ -226,7 +226,7 @@ class SequenceDataset(Dataset):
         return len(self.targets)
     
 
-def create_dataloader(series, sequence_params, dataloader_params):
+def create_dataloader(series, sequence_params, dataloader_params, shuffle=False):
     '''
     series: [np.ndarray] - time-series
     sequence_params: [dict] - {'training_window': 200, 'prediction_window': 100, 'step': 1}
@@ -234,6 +234,6 @@ def create_dataloader(series, sequence_params, dataloader_params):
     '''
     sequences, targets = generate_sequences(series, **sequence_params)
     dataset = SequenceDataset(sequences, targets)
-    loader = DataLoader(dataset, **dataloader_params)
+    loader = DataLoader(dataset, shuffle=shuffle, **dataloader_params)
     return loader
     

@@ -87,14 +87,30 @@ class TimeSeries:
         testloader = create_dataloader(test, sequence_params, dataloader_params)
         return trainloader, testloader
 
+    def transform_series(self, series):
+        if self.smooth_params is not None:
+            series_smooth = self.smooth(series)
+            series_smooth = self.scaler_smooth.transform(series_smooth[:, np.newaxis])
+            N = len(self.smooth_params['kernel'])
+            series = series[N//2:len(series)-N//2]
+        series = self.scaler.transform(series[:, np.newaxis])
+        return series, series_smooth
+
 
 class TimeSeriesSTFT:
-    def __init__(self, series, stft_params, scaling='standard', train_size=0.8, filter_params):
+    def __init__(self, series, stft_params, scaling='standard', train_size=0.8, filter_params=None):
         '''
         This class provides necessary tools to prepare a single time-series for NN
         working with STFT features
 
-        
+        series: [numpy ndarray] - univariate time-series
+        stft_params: [dict] - parameters for STFT (see scipy documentation)
+        scaling: [str] - scaling to be used, one of ['standard', 'minmax']
+        train_size: [float] - fraction of training data
+        filter_params: [dict] - parameters to filter non-relevant frequencies from STFT spectrum,
+                                e.g., filter_params = {'thresh_weight': 1, 'freq_low': 0} where
+                                frequency threshold is determined by 'thresh_weight' * np.mean(np.abs(stft).sum(axis=1))
+                                and all frequencies lower than 'freq_low' are also filtered out
         '''
         self.series = series
         self.stft_params = stft_params
@@ -108,7 +124,7 @@ class TimeSeriesSTFT:
         self.split_stft_filter_scale(self.filter_params)
 
     def calculate_stft(self, series):
-        freq, t, spectrum = stft(series, **self.stft_kwargs)
+        freq, t, spectrum = stft(series, **self.stft_params)
         return freq, t, spectrum
 
     def filter_stft(self, freq, spectrum, filter_params, idx_filt=None):
@@ -124,7 +140,7 @@ class TimeSeriesSTFT:
             idx[idx_freq] = True
             idx_filt = np.logical_not(idx)
         freq_filt = freq[idx_filt]
-        spectrum_filt[idx] = 0
+        spectrum_filt[np.logical_not(idx_filt)] = 0
         return idx_filt, freq_filt, spectrum_filt  
 
     def train_test_split(self, series):
@@ -138,37 +154,43 @@ class TimeSeriesSTFT:
         series_scaled = scaler.transform(series)
         return series_scaled, scaler
 
-    def split_stft_filter_scale(self, filter_params, combine_real_imag=True):
+    def split_stft_filter_scale(self, filter_params):
         self.train, self.test = self.train_test_split(self.series)
 
         # calculate and filter stft
         self.freq, self.t, self.train_stft = self.calculate_stft(self.train)
         self.idx_filt, self.freq_filt, self.train_stft_filt = self.filter_stft(self.freq, self.train_stft,
                                                                                filter_params)
-        self.train_real, self.train_imag = np.real(self.train_stft_filt), np.imag(self.train_stft_filt)
-        if combine_real_imag:
-            self.train_real_imag = np.vstack([self.train_real, self.train_imag])
-            self.train_real_imag, self.scaler_real_imag = self.scale(self.train_real_imag)
-        else:
-            self.train_real, self.scaler_real = self.scale(self.train_real)
-            self.train_imag, self.scaler_imag = self.scale(self.train_imag)
+        self.train_real = np.real(self.train_stft_filt[self.idx_filt])
+        self.train_imag = np.imag(self.train_stft_filt[self.idx_filt])
+        self.train_real, self.scaler_real = self.scale(self.train_real.T)
+        self.train_imag, self.scaler_imag = self.scale(self.train_imag.T)
         
         _, _, self.test_stft = self.calculate_stft(self.test)
         _, _, self.test_stft_filt = self.filter_stft(self.freq, self.test_stft, filter_params, self.idx_filt)
-        self.test_real, self.test_imag = np.real(self.test_stft_filt), np.imag(self.test_stft_filt)
-        self.test_real, _ = self.scale(self.test_real, self.scaler_real)
-        self.test_imag, _ = self.scale(self.test_imag, self.scaler_imag)
-
-    #TODO: implement option of combining real and imaginary parts into one feature array
-    #TODO: add possibility of creating dataloaders for single frequency bands
-
+        self.test_real = np.real(self.test_stft_filt[self.idx_filt])
+        self.test_imag = np.imag(self.test_stft_filt[self.idx_filt])
+        self.test_real, _ = self.scale(self.test_real.T, self.scaler_real)
+        self.test_imag, _ = self.scale(self.test_imag.T, self.scaler_imag)
+    
     @staticmethod
-    def create_dataloaders(train, test, sequence_params, dataloader_params):
+    def create_dataloaders(train_real, train_imag, test_real, test_imag, sequence_params, dataloader_params):
+        train = np.hstack([train_real, train_imag])
         trainloader = create_dataloader(train, sequence_params, dataloader_params)
+        test = np.hstack([test_real, test_imag])
         testloader = create_dataloader(test, sequence_params, dataloader_params)
         return trainloader, testloader
 
-    
+    def transform_series(self, series):
+        _, _, stft_spectrum = self.calculate_stft(series)
+        _, _, stft_spectrum_filt = self.filter_stft(self.freq, stft_spectrum, self.filter_params, self.idx_filt)
+        real = np.real(stft_spectrum_filt[self.idx_filt])
+        imag = np.imag(stft_spectrum_filt[self.idx_filt])
+        
+        real = self.scale(real.T, self.scaler_real)
+        imag = self.scale(imag.T, self.scaler_imag)
+        return np.hstack([real, imag])
+
 
 def generate_sequences(series, training_window, prediction_window, step=1):
     '''

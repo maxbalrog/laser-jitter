@@ -11,6 +11,7 @@ import torch.nn as nn
 from laser_jitter.model_basic import LSTMForecaster
 from laser_jitter.utils import read_yaml, write_yaml
 from laser_jitter.train import train_model
+from laser_jitter.inference import predict_on_series
 
 __all__ = ['RNNTemporal']
 
@@ -46,7 +47,8 @@ class RNNTemporal:
         return self.model
 
     def predict(self, x):
-        prediction = self.model(x).squeeze()
+        with torch.no_grad():
+            prediction = self.model(x).squeeze()
         return prediction
 
     def train(self, trainloader, testloader, criterion, optimizer, n_epochs=30, verbose=True):
@@ -76,7 +78,8 @@ class RNNTemporal:
         predictions = torch.cat(predictions).squeeze()
         actuals = torch.cat(actuals).squeeze()
         actuals_smooth = torch.cat(actuals_smooth).squeeze()
-        
+
+        # TODO: return scaled predictions and actuals as well???
         metrics = self.calculate_metrics(predictions.flatten(), actuals.flatten())
         if scaler is not None:
             metrics = [scaler.inverse_transform(np.array([metric])[:,None]).squeeze() for metric in metrics]
@@ -88,6 +91,16 @@ class RNNTemporal:
         rms = np.sqrt(nn.MSELoss(reduction='mean')(predictions, actuals))
         return (mae, rms)
 
-    def predict_on_series():
+
+class RNNSTFT:
+    #TODO
+    def __init__(self):
         pass
+
+
+
+
+
+
+    
 

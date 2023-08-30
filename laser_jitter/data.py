@@ -96,6 +96,9 @@ class TimeSeries:
         series = self.scaler.transform(series[:, np.newaxis])
         return series, series_smooth
 
+    def inverse_transform_series(self, series):
+        return self.scaler_smooth.inverse_transform(series[:,np.newaxis]).squeeze()
+
 
 class TimeSeriesSTFT:
     def __init__(self, series, stft_params, scaling='standard', train_size=0.8, filter_params=None):
@@ -190,6 +193,8 @@ class TimeSeriesSTFT:
         real = self.scale(real.T, self.scaler_real)
         imag = self.scale(imag.T, self.scaler_imag)
         return np.hstack([real, imag])
+
+    #TODO: Add inverse transform
 
 
 def generate_sequences(series, training_window, prediction_window, step=1):

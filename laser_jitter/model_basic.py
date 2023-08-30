@@ -1,5 +1,5 @@
 '''
-This script provides basic NN architectures used for time-series forecasting. Currently only LSTM
+Basic NN architectures used for time-series forecasting. Currently only LSTM
 followed by FC layers is supported.
 '''
 import torch

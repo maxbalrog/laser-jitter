@@ -96,8 +96,14 @@ class TimeSeries:
         series = self.scaler.transform(series[:, np.newaxis])
         return series, series_smooth
 
-    def inverse_transform_series(self, series):
-        return self.scaler_smooth.inverse_transform(series[:,np.newaxis]).squeeze()
+    def inverse_transform_series(self, series, scaler=None):
+        if series.ndim == 1:
+            series = series[:,np.newaxis]
+        if scaler is None:
+            series_scaled = self.scaler_smooth.inverse_transform(series).squeeze()
+        else:
+            series_scaled = scaler.inverse_transform(series).squeeze()
+        return series_scaled
 
 
 class TimeSeriesSTFT:
@@ -194,7 +200,20 @@ class TimeSeriesSTFT:
         imag = self.scale(imag.T, self.scaler_imag)
         return np.hstack([real, imag])
 
-    #TODO: Add inverse transform
+    def inverse_transform_series(self, series):
+        '''
+        Expecting series (prediction_window, n_freq_filt*2) where first half of features
+        correspond to real part and second half to imaginary
+        '''
+        n_freq_filt, n_freq = len(self.freq_filt), len(self.freq)
+        real = self.scaler_real.inverse_transform(series[:,:n_freq_filt]).T
+        imag = self.scaler_imag.inverse_transform(series[:,n_freq_filt:]).T
+        stft_spectrum = np.zeros_like(self.train_stft)
+        idx = np.arange(n_freq)[self.idx_filt]
+        for i,idx in enumerate(idx):
+            stft_spectrum[idx] = real[i] + 1j*imag[i]
+        t, series = istft(stft_spectrum, **self.istft_params)
+        return series
 
 
 def generate_sequences(series, training_window, prediction_window, step=1):

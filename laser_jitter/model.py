@@ -26,6 +26,7 @@ class RNNTemporal:
         self.save_path = save_path
         
         self.model = model if model is not None else self.load_best_model()
+        self.model.to(self.device)
         
         # make sure that directory for saving the model exists
         Path(os.path.dirname(save_path)).mkdir(parents=True, exist_ok=True)
@@ -52,13 +53,13 @@ class RNNTemporal:
         return prediction
 
     def train(self, trainloader, testloader, criterion, optimizer, n_epochs=30, verbose=True):
+        self.model = self.model.to(self.device)
         losses = train_model(self.model, trainloader, testloader, criterion, optimizer,
                              n_epochs=n_epochs, SEED=self.SEED, save_path=self.save_path,
                              device=self.device, verbose=True)
         return losses
 
-    def inference_on_dataloader(self, model, dataloader, dataloader_smooth=None, device='cuda',
-                                scaler=None):
+    def inference_on_dataloader(self, model, dataloader, dataloader_smooth=None, device='cuda'):
         model = model.to(device)
         model.eval()
         predictions, actuals, actuals_smooth = [], [], []
@@ -81,10 +82,11 @@ class RNNTemporal:
 
         # TODO: return scaled predictions and actuals as well???
         metrics = self.calculate_metrics(predictions.flatten(), actuals.flatten())
-        if scaler is not None:
-            metrics = [scaler.inverse_transform(np.array([metric])[:,None]).squeeze() for metric in metrics]
+        # if scaler is not None:
+        #     metrics = [scaler.inverse_transform(np.array([metric])[:,None]).squeeze() for metric in metrics]
+        #     predictions = scaler.inverse_transform(np.array(predictions)[:,None])
         
-        return (predictions, actuals, actuals_smooth), metrics
+        return (predictions.numpy(), actuals.numpy(), actuals_smooth.numpy()), metrics
 
     def calculate_metrics(self, predictions, actuals):
         mae = nn.L1Loss(reduction='mean')(predictions, actuals)

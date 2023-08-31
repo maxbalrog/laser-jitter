@@ -56,20 +56,7 @@ class LSTMForecaster(nn.Module):
         self.dnn = nn.Sequential(*dnn_layers)
 
     def forward(self, x):
-        # Initialize hidden state
-        # hidden_state = torch.zeros(self.n_lstm_layers, x.shape[0], self.nhid)
-        # cell_state = torch.zeros(self.n_lstm_layers, x.shape[0], self.nhid)
-
-        # # move hidden state to device
-        # if self.use_cuda:
-        #     hidden_state = hidden_state.to(self.device)
-        #     cell_state = cell_state.to(self.device)
-
-        # self.hidden = (hidden_state, cell_state)
-
-        # Forward Pass
         x, h = self.lstm(x)
-        # x, h = self.lstm(x, self.hidden) # LSTM
         x = self.dropout(x.contiguous().view(x.shape[0], -1)) # Flatten lstm out 
         x = self.fc1(x) # First Dense
         return self.dnn(x) # Pass forward through fully connected DNN.

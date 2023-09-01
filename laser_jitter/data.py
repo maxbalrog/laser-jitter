@@ -83,8 +83,10 @@ class TimeSeries:
 
     @staticmethod
     def create_dataloaders(train, test, sequence_params, dataloader_params):
-        trainloader = create_dataloader(train, sequence_params, dataloader_params, shuffle=True)
-        testloader = create_dataloader(test, sequence_params, dataloader_params, shuffle=False)
+        trainloader = create_dataloader(train, sequence_params, dataloader_params,
+                                        shuffle=True)
+        testloader = create_dataloader(test, sequence_params, dataloader_params,
+                                       shuffle=False)
         return trainloader, testloader
 
     def transform_series(self, series):
@@ -195,9 +197,11 @@ class TimeSeriesSTFT:
         _, _, stft_spectrum_filt = self.filter_stft(self.freq, stft_spectrum, self.filter_params, self.idx_filt)
         real = np.real(stft_spectrum_filt[self.idx_filt])
         imag = np.imag(stft_spectrum_filt[self.idx_filt])
+        # print(real.shape, imag.shape)
         
-        real = self.scale(real.T, self.scaler_real)
-        imag = self.scale(imag.T, self.scaler_imag)
+        real, _ = self.scale(real.T, self.scaler_real)
+        imag, _ = self.scale(imag.T, self.scaler_imag)
+        # print(real.shape, imag.shape)
         return np.hstack([real, imag])
 
     def inverse_transform_series(self, series):
@@ -208,10 +212,11 @@ class TimeSeriesSTFT:
         n_freq_filt, n_freq = len(self.freq_filt), len(self.freq)
         real = self.scaler_real.inverse_transform(series[:,:n_freq_filt]).T
         imag = self.scaler_imag.inverse_transform(series[:,n_freq_filt:]).T
-        stft_spectrum = np.zeros_like(self.train_stft)
+        stft_spectrum = np.zeros((len(self.freq),series.shape[0]), dtype=np.complex128)
+        # print(stft_spectrum.shape, real.shape, imag.shape)
         idx = np.arange(n_freq)[self.idx_filt]
-        for i,idx in enumerate(idx):
-            stft_spectrum[idx] = real[i] + 1j*imag[i]
+        for i,j in enumerate(idx):
+            stft_spectrum[j] = real[i] + 1j*imag[i]
         t, series = istft(stft_spectrum, **self.istft_params)
         return series
 

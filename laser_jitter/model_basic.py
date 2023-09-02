@@ -57,6 +57,6 @@ class LSTMForecaster(nn.Module):
 
     def forward(self, x):
         x, h = self.lstm(x)
-        x = self.dropout(x.contiguous().view(x.shape[0], -1)) # Flatten lstm out 
+        x = self.dropout(x.contiguous().view(x.shape[0], -1)) # Flatten lstm out
         x = self.fc1(x) # First Dense
         return self.dnn(x) # Pass forward through fully connected DNN.

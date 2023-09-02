@@ -109,7 +109,8 @@ class TimeSeries:
 
 
 class TimeSeriesSTFT:
-    def __init__(self, series, stft_params, scaling='standard', train_size=0.8, filter_params=None):
+    def __init__(self, series, stft_params, scaling='standard', train_size=0.8, filter_params=None,
+                 smooth_params=None):
         '''
         This class provides necessary tools to prepare a single time-series for NN
         working with STFT features
@@ -131,8 +132,20 @@ class TimeSeriesSTFT:
         self.scaling = scaling
         self.train_size = train_size
         self.filter_params = filter_params
+        self.smooth_params = smooth_params
+        if smooth_params is not None:
+            self.do_smooth()
 
         self.split_stft_filter_scale(self.filter_params)
+
+    def smooth(self, series):
+        series_smooth = np.convolve(series, self.smooth_params['kernel'], mode='valid')
+        return series_smooth
+
+    def do_smooth(self):
+        self.series_smooth = self.smooth(self.series)
+        N = len(self.smooth_params['kernel'])
+        self.series = self.series[N//2:len(self.series)-N//2]
 
     def calculate_stft(self, series):
         freq, t, spectrum = stft(series, **self.stft_params)
@@ -166,7 +179,10 @@ class TimeSeriesSTFT:
         return series_scaled, scaler
 
     def split_stft_filter_scale(self, filter_params):
-        self.train, self.test = self.train_test_split(self.series)
+        if self.smooth_params is None:
+            self.train, self.test = self.train_test_split(self.series)
+        else:
+            self.train, self.test = self.train_test_split(self.series_smooth)
 
         # calculate and filter stft
         self.freq, self.t, self.train_stft = self.calculate_stft(self.train)
@@ -193,15 +209,15 @@ class TimeSeriesSTFT:
         return trainloader, testloader
 
     def transform_series(self, series):
+        if self.smooth_params is not None:
+            series = self.smooth(series)
         _, _, stft_spectrum = self.calculate_stft(series)
         _, _, stft_spectrum_filt = self.filter_stft(self.freq, stft_spectrum, self.filter_params, self.idx_filt)
         real = np.real(stft_spectrum_filt[self.idx_filt])
         imag = np.imag(stft_spectrum_filt[self.idx_filt])
-        # print(real.shape, imag.shape)
         
         real, _ = self.scale(real.T, self.scaler_real)
         imag, _ = self.scale(imag.T, self.scaler_imag)
-        # print(real.shape, imag.shape)
         return np.hstack([real, imag])
 
     def inverse_transform_series(self, series):

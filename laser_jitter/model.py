@@ -133,7 +133,7 @@ class RNNTemporal(RNN_abc):
         series, series_smooth = series_class.transform_series(series)
         seq_len = len(series_smooth)
         n_features = 1 if series.ndim == 1 else series.shape[1]
-        
+ 
         x = torch.Tensor(series_smooth.reshape((1,seq_len,n_features))).to(device)
         prediction = self.predict(x).cpu().numpy()
         prediction = series_class.inverse_transform_series(prediction)
@@ -167,10 +167,14 @@ class RNNSTFT(RNN_abc):
         nperseg, noverlap = series_class.stft_params['nperseg'], series_class.stft_params['noverlap']
         training_window = sequence_params['training_window']
         prediction_window = sequence_params['prediction_window']
+        if series_class.smooth_params is not None:
+            N = series_class.smooth_params['kernel'].shape[0]
+        else:
+            N = 0
         step = nperseg - noverlap
         start = noverlap + training_window*step
         
-        actuals = [series[t0:t0+forecast_window] for t0 in range(start,len(series)-prediction_window)]
+        actuals = [series[t0:t0+forecast_window] for t0 in range(start+N//2,len(series)-prediction_window-N//2)]
         actuals = np.array(actuals)
         stft_series = series_class.transform_series(series)
         stft_loader = create_dataloader(stft_series, sequence_params, dataloader_params,
@@ -250,8 +254,12 @@ class RNNSTFT_real_imag(RNN_abc):
         prediction_window = sequence_params['prediction_window']
         step = nperseg - noverlap
         start = noverlap + training_window*step
+        if series_class.smooth_params is not None:
+            N = series_class.smooth_params['kernel'].shape[0]
+        else:
+            N = 0
         
-        actuals = [series[t0:t0+forecast_window] for t0 in range(start,len(series)-prediction_window)]
+        actuals = [series[t0:t0+forecast_window] for t0 in range(start+N//2,len(series)-prediction_window-N//2)]
         actuals = np.array(actuals)
         stft_series = series_class.transform_series(series)
         stft_loader = create_dataloader(stft_series, sequence_params, dataloader_params,

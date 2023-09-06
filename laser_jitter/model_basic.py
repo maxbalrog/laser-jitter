@@ -10,7 +10,8 @@ __all__ = ['LSTMForecaster']
 
 class LSTMForecaster(nn.Module):
     def __init__(self, n_features, n_hidden_lstm, n_hidden_fc, n_outputs, sequence_len,
-                 n_lstm_layers=1, n_deep_layers=10, dropout=0.2, use_cuda=False):
+                 n_lstm_layers=1, n_deep_layers=10, dropout=0.2, use_cuda=False,
+                 n_out_features=1):
         '''
         n_features: [int] - number of input features (1 for univariate forecasting)
         n_hidden_lstm: [int] - number of neurons in each hidden layer of LSTM

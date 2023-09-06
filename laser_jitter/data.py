@@ -10,7 +10,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 
-__all__ = ['TimeSeries', 'TimeSeriesSTFT', 'generate_sequences', 'SequenceDataset',
+__all__ = ['TimeSeries', 'TimeSeriesSTFT', 'TimeSeriesInSTFTOutTime',
+           'generate_sequences', 'SequenceDataset',
            'create_dataloader']
 
 
@@ -237,13 +238,41 @@ class TimeSeriesSTFT:
         return series
 
 
+class TimeSeriesInSTFTOutTime(TimeSeriesSTFT):
+    def __init__(self, series, stft_params, scaling='standard', train_size=0.8, filter_params=None,
+                 smooth_params=None):
+        super().__init__(series, stft_params, scaling='standard', train_size=0.8,
+                         filter_params=filter_params, smooth_params=smooth_params)
+        self.scale_series()
+
+    def scale_series(self):
+        self.train, self.scaler = self.scale(self.train[:,np.newaxis])
+        self.test, _ = self.scale(self.test[:,np.newaxis], self.scaler)
+
+    def create_dataloaders(self, train_real, train_imag, train_series, test_real, test_imag,
+                           test_series, sequence_params, dataloader_params, stft_params):
+        train_stft = np.hstack([train_real, train_imag])
+        test_stft = np.hstack([test_real, test_imag])
+        trainloader = create_dataloader_stft_time(train_series, train_stft, sequence_params,
+                                        dataloader_params, stft_params, shuffle=True)
+        testloader = create_dataloader_stft_time(test_series, test_stft, sequence_params,
+                                       dataloader_params, stft_params, shuffle=False)
+        return trainloader, testloader
+
+    def inverse_transform_series(self, series):
+        if series.ndim == 1:
+            series = series[:,np.newaxis]
+        series = self.scaler.inverse_transform(series)
+        return series
+
+
 def generate_sequences(series, training_window, prediction_window, step=1):
     '''
     series: Time Series [numpy ndarray (series_len, n_features)] - time-series
     training_window [int] - how many steps to look back
     prediction_window [int] - how many steps forward to predict
-    step: [int] - step between two sequences in data, e.g. (step=1, tw=5) results in sequences [0:5], [1:6], ...
-          (step=3, tw=5) -> [0:5], [3:8], ...
+    step: [int] - step between two sequences in data, e.g. (step=1, tw=5) results 
+    in sequences [0:5], [1:6], ...; (step=3, tw=5) -> [0:5], [3:8], ...
 
     returns: dictionary of sequences and targets for all sequences
     '''
@@ -253,6 +282,21 @@ def generate_sequences(series, training_window, prediction_window, step=1):
     for i in range(0, L-tw-pw, step):
         # Get current sequence 
         sequences.append(series[i:i+tw])
+        # Get values right after the current sequence
+        targets.append(series[i+tw:i+tw+pw])
+    return sequences, targets
+
+
+def generate_sequences_stft_time(series, series_stft, training_window, prediction_window,
+                                 stft_params, step=1):
+    L = series_stft.shape[0]
+    tw, pw = training_window, prediction_window
+    stft_window = stft_params['noverlap']
+    series = series[stft_window:]
+    sequences, targets = [], []
+    for i in range(0, L-tw-pw, step):
+        # Get current sequence 
+        sequences.append(series_stft[i:i+tw])
         # Get values right after the current sequence
         targets.append(series[i+tw:i+tw+pw])
     return sequences, targets
@@ -278,6 +322,19 @@ def create_dataloader(series, sequence_params, dataloader_params, shuffle=False)
     dataloader_params: [dict] - {'batch_size': 64, 'shuffle': True, 'drop_last': False}
     '''
     sequences, targets = generate_sequences(series, **sequence_params)
+    dataset = SequenceDataset(sequences, targets)
+    loader = DataLoader(dataset, shuffle=shuffle, **dataloader_params)
+    return loader
+
+def create_dataloader_stft_time(series, series_stft, sequence_params, dataloader_params,
+                                stft_params, shuffle=False):
+    '''
+    series: [np.ndarray] - time-series
+    sequence_params: [dict] - {'training_window': 200, 'prediction_window': 100, 'step': 1}
+    dataloader_params: [dict] - {'batch_size': 64, 'shuffle': True, 'drop_last': False}
+    '''
+    sequences, targets = generate_sequences_stft_time(series, series_stft, **sequence_params,
+                                                      stft_params=stft_params)
     dataset = SequenceDataset(sequences, targets)
     loader = DataLoader(dataset, shuffle=shuffle, **dataloader_params)
     return loader

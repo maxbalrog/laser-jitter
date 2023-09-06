@@ -15,7 +15,7 @@ def train_model(model, trainloader, testloader, criterion, optimizer,
                 model_params=None):
     fix_seed(SEED)
 
-    n_features = model_params['n_features']
+    n_features = model_params['n_out_features']
     prediction_window = model_params['n_outputs'] // n_features
     
     t_losses, v_losses = [], []

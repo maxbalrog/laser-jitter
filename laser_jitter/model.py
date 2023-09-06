@@ -8,13 +8,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from laser_jitter.data import create_dataloader
+from laser_jitter.data import create_dataloader, create_dataloader_stft_time
 from laser_jitter.model_basic import LSTMForecaster
 from laser_jitter.utils import read_yaml, write_yaml
 from laser_jitter.train import train_model, train_model_real_imag, train_model_ensemble
 from laser_jitter.inference import calculate_metrics
 
-__all__ = ['RNN_abc', 'RNNTemporal', 'RNNSTFT', 'RNNSTFT_real_imag']
+__all__ = ['RNN_abc', 'RNNTemporal', 'RNNSTFT', 'RNNSTFTInTimeOut', 'RNNSTFT_real_imag']
 
 
 class RNN_abc:
@@ -46,7 +46,8 @@ class RNN_abc:
 
         self.SEED = SEED
         self.n_features = model_params['n_features']
-        self.prediction_window = model_params['n_outputs'] // self.n_features
+        self.n_out_features = model_params['n_out_features']
+        self.prediction_window = model_params['n_outputs'] // self.n_out_features
 
     def save_model_params(self):
         self.yaml_file = f'{os.path.dirname(self.save_folder)}/model_params.yml'
@@ -79,7 +80,8 @@ class RNN_abc:
         self.model = self.model.to(self.device)
         losses = train_model(self.model, trainloader, testloader, criterion, optimizer,
                              n_epochs=n_epochs, SEED=self.SEED, save_path=self.save_path,
-                             device=self.device, verbose=True, model_params=self.model_params)
+                             device=self.device, verbose=True, model_params=self.model_params,
+                             )
         return losses
 
     def inference_on_dataloader(self):
@@ -151,11 +153,12 @@ class RNNSTFT(RNN_abc):
         save_path: [str] - path for model weights and model info to be saved
         '''
         super().__init__(model_params, model, save_folder, load_model, SEED)
+        # self.n_out_features = model_params['n_out_features']
 
     def predict(self, x):
         with torch.no_grad():
             prediction = self.model(x).squeeze()
-            prediction = prediction.reshape((-1,self.prediction_window,self.n_features))
+            prediction = prediction.reshape((-1,self.prediction_window,self.n_out_features))
         return prediction
 
     def inference_on_dataloader(self, series, series_class, sequence_params, dataloader_params,
@@ -202,6 +205,49 @@ class RNNSTFT(RNN_abc):
         return prediction
 
 
+class RNNSTFTInTimeOut(RNNSTFT):
+    def __init__(self, model_params=None, model=None, save_folder='', load_model=False, SEED=23):
+        super().__init__(model_params, model, save_folder, load_model, SEED)
+
+    def inference_on_dataloader(self, series, series_class, sequence_params, dataloader_params,
+                                stft_params, forecast_window=100):
+        '''
+        Expect time series as input
+        time-series -> stft dataloader -> stft predictions -> time-series prediction
+        '''
+        nperseg, noverlap = series_class.stft_params['nperseg'], series_class.stft_params['noverlap']
+        training_window = sequence_params['training_window']
+        prediction_window = sequence_params['prediction_window']
+        if series_class.smooth_params is not None:
+            N = series_class.smooth_params['kernel'].shape[0]
+        else:
+            N = 0
+        step = nperseg - noverlap
+        start = noverlap + training_window*step
+        
+        actuals = [series[t0:t0+forecast_window] for t0 in range(start+N//2,len(series)-prediction_window-N//2)]
+        actuals = np.array(actuals)
+        stft_series = series_class.transform_series(series)
+        stft_loader = create_dataloader_stft_time(series, stft_series, sequence_params,
+                                                  dataloader_params, stft_params, shuffle=False)
+        predictions = []
+        # predictions, actuals = [], []
+        for x,y in stft_loader:
+            batch_size = x.shape[0]
+            prediction = self.predict(x.to(self.device)).cpu().numpy()
+            predictions.append(prediction.flatten())
+            # actuals.append(y.flatten())
+
+        # actuals = np.array(actuals)
+        predictions = np.concatenate(predictions)
+        predictions = series_class.scaler.inverse_transform(predictions[:,None]).squeeze()
+        predictions = predictions.reshape(actuals.shape)
+        metrics = calculate_metrics(torch.Tensor(predictions.flatten()),
+                                    torch.Tensor(actuals.flatten()))
+        return (predictions, actuals), metrics
+        
+
+
 class RNNSTFT_real_imag(RNN_abc):
     def __init__(self, model_params=None, model=None, save_folder='', load_model=False, SEED=23):
         '''
@@ -232,7 +278,7 @@ class RNNSTFT_real_imag(RNN_abc):
         with torch.no_grad():
             for i in range(self.n_models):
                 pred = self.model[i](x[:,:,i*self.n_features:(i+1)*self.n_features]).squeeze()
-                pred = pred.reshape((-1,self.prediction_window,self.n_features))
+                pred = pred.reshape((-1,self.prediction_window,self.n_out_features))
                 preds.append(pred)
             prediction = torch.cat(preds, dim=-1)
         return prediction

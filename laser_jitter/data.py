@@ -1,5 +1,5 @@
 '''
-This script provides data classes for time series analysis.
+Data classes for time series analysis and functions for creating dataloaders
 '''
 
 import numpy as np
@@ -11,8 +11,8 @@ from torch.utils.data import Dataset, DataLoader
 
 
 __all__ = ['TimeSeries', 'TimeSeriesSTFT', 'TimeSeriesInSTFTOutTime',
-           'generate_sequences', 'SequenceDataset',
-           'create_dataloader']
+           'generate_sequences', 'generate_sequences_stft_time', 'SequenceDataset',
+           'create_dataloader', 'create_dataloader_stft_time']
 
 
 class TimeSeries:
@@ -64,7 +64,6 @@ class TimeSeries:
         return data
 
     def smooth_split_and_scale(self):
-        # TODO: Do we actually need these results variable???
         results = {}
         if self.smooth_params is not None:
             self.series_smooth = self.smooth(self.series)
@@ -122,8 +121,10 @@ class TimeSeriesSTFT:
         train_size: [float] - fraction of training data
         filter_params: [dict] - parameters to filter non-relevant frequencies from STFT spectrum,
                                 e.g., filter_params = {'thresh_weight': 1, 'freq_low': 0} where
-                                frequency threshold is determined by 'thresh_weight' * np.mean(np.abs(stft).sum(axis=1))
+                                frequency threshold is determined by 
+                                'thresh_weight' * np.mean(np.abs(stft).sum(axis=1))
                                 and all frequencies lower than 'freq_low' are also filtered out
+        smooth_params: [dict] - parameters for smoothing
         '''
         self.series = series
         self.stft_params = stft_params
@@ -241,6 +242,21 @@ class TimeSeriesSTFT:
 class TimeSeriesInSTFTOutTime(TimeSeriesSTFT):
     def __init__(self, series, stft_params, scaling='standard', train_size=0.8, filter_params=None,
                  smooth_params=None):
+        '''
+        This class provides necessary tools to prepare a single time-series for NN
+        taking STFT features as input and producing temporal features as output
+
+        series: [numpy ndarray] - univariate time-series
+        stft_params: [dict] - parameters for STFT (see scipy documentation)
+        scaling: [str] - scaling to be used, one of ['standard', 'minmax']
+        train_size: [float] - fraction of training data
+        filter_params: [dict] - parameters to filter non-relevant frequencies from STFT spectrum,
+                                e.g., filter_params = {'thresh_weight': 1, 'freq_low': 0} where
+                                frequency threshold is determined by 
+                                'thresh_weight' * np.mean(np.abs(stft).sum(axis=1))
+                                and all frequencies lower than 'freq_low' are also filtered out
+        smooth_params: [dict] - parameters for smoothing
+        '''
         super().__init__(series, stft_params, scaling='standard', train_size=0.8,
                          filter_params=filter_params, smooth_params=smooth_params)
         self.scale_series()
@@ -274,7 +290,7 @@ def generate_sequences(series, training_window, prediction_window, step=1):
     step: [int] - step between two sequences in data, e.g. (step=1, tw=5) results 
     in sequences [0:5], [1:6], ...; (step=3, tw=5) -> [0:5], [3:8], ...
 
-    returns: dictionary of sequences and targets for all sequences
+    returns: sequences and targets for all sequences
     '''
     L = len(series)
     tw, pw = training_window, prediction_window
@@ -289,6 +305,18 @@ def generate_sequences(series, training_window, prediction_window, step=1):
 
 def generate_sequences_stft_time(series, series_stft, training_window, prediction_window,
                                  stft_params, step=1):
+    '''
+    series: Time Series [numpy ndarray (series_len, n_features)] - time-series
+    series_stft: STFT Time Series [numpy ndarray (series_len, n_features)] - time-series
+                 of STFT features 
+    training_window [int] - how many steps to look back
+    prediction_window [int] - how many steps forward to predict
+    stft_params: [dict] - parameters for STFT (see scipy documentation)
+    step: [int] - step between two sequences in data, e.g. (step=1, tw=5) results 
+    in sequences [0:5], [1:6], ...; (step=3, tw=5) -> [0:5], [3:8], ...
+
+    returns: sequences and targets for all sequences
+    '''
     L = series_stft.shape[0]
     tw, pw = training_window, prediction_window
     stft_window = stft_params['noverlap']
@@ -330,8 +358,10 @@ def create_dataloader_stft_time(series, series_stft, sequence_params, dataloader
                                 stft_params, shuffle=False):
     '''
     series: [np.ndarray] - time-series
+    series_stft: [np.ndarray] - time-series of STFT features 
     sequence_params: [dict] - {'training_window': 200, 'prediction_window': 100, 'step': 1}
     dataloader_params: [dict] - {'batch_size': 64, 'shuffle': True, 'drop_last': False}
+    stft_params: [dict] - parameters for STFT (see scipy documentation)
     '''
     sequences, targets = generate_sequences_stft_time(series, series_stft, **sequence_params,
                                                       stft_params=stft_params)

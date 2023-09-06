@@ -1,5 +1,6 @@
 '''
-Generic training protocol
+Generic training protocols for a single model, two models operating on real and imaginary part 
+of the spectrum and model ensemble
 '''
 import os
 from pathlib import Path
@@ -7,12 +8,24 @@ import numpy as np
 import torch
 from laser_jitter.utils import fix_seed
 
-__all__ = ['train_model']
+__all__ = ['train_model', 'train_model_real_imag', 'train_model_ensemble']
 
     
 def train_model(model, trainloader, testloader, criterion, optimizer,
                 n_epochs=50, SEED=23, save_path='models/rnn.pth', device='cpu', verbose=True,
                 model_params=None):
+    '''
+    model: [torch.nn.Module] - NN model
+    trainloader: [torch.utils.data.DataLoader] - dataloader of train data
+    testloader: [torch.utils.data.DataLoader] - dataloader of test data
+    criterion: [torch metric] - metric to access the performance of the model
+    optimizer: [torch optimizer] - optimizer of model parameters
+    n_epochs: [int] - number of training epochs
+    save_path: [str] - path to save model to
+    device: ['cpu' or 'cuda'] - device to perform calculations
+    verbose: [True or False] - whether to print epoch loss information
+    model_params: [dict] - parameters of model
+    '''
     fix_seed(SEED)
 
     n_features = model_params['n_out_features']
@@ -63,6 +76,18 @@ def train_model(model, trainloader, testloader, criterion, optimizer,
 def train_model_real_imag(models, trainloader, testloader, criterion, optimizers,
                 n_epochs=50, SEED=23, save_path=None, device='cpu', verbose=True,
                 model_params=None):
+    '''
+    models: [list of torch.nn.Module] - NN models
+    trainloader: [torch.utils.data.DataLoader] - dataloader of train data
+    testloader: [torch.utils.data.DataLoader] - dataloader of test data
+    criterion: [torch metric] - metric to access the performance of the model
+    optimizers: [list of torch optimizers] - optimizers of model parameters
+    n_epochs: [int] - number of training epochs
+    save_path: [str] - path to save model to
+    device: ['cpu' or 'cuda'] - device to perform calculations
+    verbose: [True or False] - whether to print epoch loss information
+    model_params: [dict] - parameters of model
+    '''
     fix_seed(SEED)
 
     n_models = len(models)
@@ -116,6 +141,18 @@ def train_model_real_imag(models, trainloader, testloader, criterion, optimizers
 def train_model_ensemble(models, trainloader, testloader, criterion, optimizers,
                 n_epochs=50, SEED=23, save_path=None, device='cpu', verbose=True,
                 model_params=None):
+    '''
+    models: [list of torch.nn.Module] - NN models
+    trainloader: [torch.utils.data.DataLoader] - dataloader of train data
+    testloader: [torch.utils.data.DataLoader] - dataloader of test data
+    criterion: [torch metric] - metric to access the performance of the model
+    optimizers: [list of torch optimizers] - optimizers of model parameters
+    n_epochs: [int] - number of training epochs
+    save_path: [str] - path to save model to
+    device: ['cpu' or 'cuda'] - device to perform calculations
+    verbose: [True or False] - whether to print epoch loss information
+    model_params: [dict] - parameters of model
+    '''
     fix_seed(SEED)
 
     n_models = len(models)

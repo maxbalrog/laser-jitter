@@ -12,7 +12,5 @@ __all__ = ['calculate_metrics']
 def calculate_metrics(predictions, actuals):
     mae = nn.L1Loss(reduction='mean')(predictions, actuals)
     rms = np.sqrt(nn.MSELoss(reduction='mean')(predictions, actuals))
-    # mae = mean_absolute_error(actuals, predictions)
-    # rms = np.sqrt(mean_squared_error(actuals, predictions))
     return (mae, rms)
 

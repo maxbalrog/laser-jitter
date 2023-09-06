@@ -25,6 +25,7 @@ class RNN_abc:
         model_params: [dict] - parameters of NN model
         model: [laser_jitter.model_basic.LSTMForecaster] - model used for prediction
         save_folder: [str] - path for model weights and model info to be saved
+        load_model: [True/False] - whether to load model from `save_folder`
         '''
         self.model_params = model_params
             
@@ -100,6 +101,7 @@ class RNNTemporal(RNN_abc):
         model_params: [dict] - parameters of NN model
         model: [laser_jitter.model_basic.LSTMForecaster] - model used for prediction
         save_path: [str] - path for model weights and model info to be saved
+        load_model: [True/False] - whether to load model from `save_folder`
         '''
         super().__init__(model_params, model, save_folder, load_model, SEED)
 
@@ -151,6 +153,7 @@ class RNNSTFT(RNN_abc):
         model_params: [dict] - parameters of NN model
         model: [laser_jitter.model_basic.LSTMForecaster] - model used for prediction
         save_path: [str] - path for model weights and model info to be saved
+        load_model: [True/False] - whether to load model from `save_folder`
         '''
         super().__init__(model_params, model, save_folder, load_model, SEED)
         # self.n_out_features = model_params['n_out_features']
@@ -207,13 +210,22 @@ class RNNSTFT(RNN_abc):
 
 class RNNSTFTInTimeOut(RNNSTFT):
     def __init__(self, model_params=None, model=None, save_folder='', load_model=False, SEED=23):
+         '''
+        High-level abstraction class for using NN model on spectral data
+        to do time-series prediction
+
+        model_params: [dict] - parameters of NN model
+        model: [laser_jitter.model_basic.LSTMForecaster] - model used for prediction
+        save_path: [str] - path for model weights and model info to be saved
+        load_model: [True/False] - whether to load model from `save_folder`
+        '''
         super().__init__(model_params, model, save_folder, load_model, SEED)
 
     def inference_on_dataloader(self, series, series_class, sequence_params, dataloader_params,
                                 stft_params, forecast_window=100):
         '''
         Expect time series as input
-        time-series -> stft dataloader -> stft predictions -> time-series prediction
+        time-series -> stft dataloader -> time-series prediction
         '''
         nperseg, noverlap = series_class.stft_params['nperseg'], series_class.stft_params['noverlap']
         training_window = sequence_params['training_window']
@@ -247,16 +259,17 @@ class RNNSTFTInTimeOut(RNNSTFT):
         return (predictions, actuals), metrics
         
 
-
 class RNNSTFT_real_imag(RNN_abc):
     def __init__(self, model_params=None, model=None, save_folder='', load_model=False, SEED=23):
         '''
         High-level abstraction class for using NN model on spectral data
-        to do time-series prediction
+        to do time-series prediction (two models to predict real/imag part of
+        STFT spectrum)
 
         model_params: [dict] - parameters of NN model
         model: [laser_jitter.model_basic.LSTMForecaster] - model used for prediction
         save_path: [str] - path for model weights and model info to be saved
+        load_model: [True/False] - whether to load model from `save_folder`
         '''
         super().__init__(model_params, model, save_folder, load_model, SEED)
         self.n_models = len(self.model)
@@ -339,11 +352,12 @@ class RNNSTFT_ensemble(RNNSTFT_real_imag):
                  n_models=1, SEED=23):
         '''
         High-level abstraction class for using NN model on spectral data
-        to do time-series prediction
+        to do time-series prediction (separate model for each frequency band spectrum)
 
         model_params: [dict] - parameters of NN model
         model: [laser_jitter.model_basic.LSTMForecaster] - model used for prediction
         save_path: [str] - path for model weights and model info to be saved
+        load_model: [True/False] - whether to load model from `save_folder`
         '''
         self.n_models = n_models
         super().__init__(model_params, model, save_folder, load_model, SEED)

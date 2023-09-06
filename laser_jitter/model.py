@@ -110,7 +110,8 @@ class RNNTemporal(RNN_abc):
             prediction = self.model(x).squeeze()
         return prediction
 
-    def inference_on_dataloader(self, dataloader, dataloader_smooth=None, device='cuda'):
+    def inference_on_dataloader(self, dataloader, series_class, dataloader_smooth=None,
+                                device='cuda'):
         self.model = self.model.to(device)
         self.model.eval()
         predictions, actuals, actuals_smooth = [], [], []
@@ -128,10 +129,20 @@ class RNNTemporal(RNN_abc):
         predictions = torch.cat(predictions).squeeze()
         actuals = torch.cat(actuals).squeeze()
         actuals_smooth = torch.cat(actuals_smooth).squeeze()
-
         metrics = calculate_metrics(predictions.flatten(), actuals.flatten())
+        # print(predictions.shape, actuals.shape, actuals_smooth.shape)
+
+        n_batches, prediction_window = predictions.shape
+        predictions = series_class.inverse_transform_series(predictions.flatten())
+        predictions = predictions.reshape((n_batches,prediction_window))
+        actuals_smooth = series_class.inverse_transform_series(actuals_smooth.flatten())
+        actuals_smooth = actuals_smooth.reshape((n_batches,prediction_window))
+        actuals = series_class.inverse_transform_series(actuals.flatten(), scaler=series_class.scaler)
+        actuals = actuals.reshape((n_batches,prediction_window))
+
+        metrics = [series_class.inverse_transform_series(np.array([metric])).squeeze() for metric in metrics]
         
-        return (predictions.numpy(), actuals.numpy(), actuals_smooth.numpy()), metrics
+        return (predictions, actuals, actuals_smooth), metrics
 
     def predict_on_series(self, series, series_class, device='cuda'):
         series, series_smooth = series_class.transform_series(series)
@@ -210,7 +221,7 @@ class RNNSTFT(RNN_abc):
 
 class RNNSTFTInTimeOut(RNNSTFT):
     def __init__(self, model_params=None, model=None, save_folder='', load_model=False, SEED=23):
-         '''
+        '''
         High-level abstraction class for using NN model on spectral data
         to do time-series prediction
 

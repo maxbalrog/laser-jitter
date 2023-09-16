@@ -11,4 +11,11 @@ setup(
     author_email='maksim.valialshchikov@uni-jena.de',
 
     packages=find_packages(exclude=['tests', 'tests.*']),
+
+    install_requires=[
+    'pytest>=4',
+    'pytest-cov>=2',
+    'torch',
+    'scikit-learn'
+    ]
 )

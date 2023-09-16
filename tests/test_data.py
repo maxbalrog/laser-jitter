@@ -21,7 +21,7 @@ sequence_params = {
     'step': 1
 }
 
-batch_size = 4
+batch_size = 64
 dataloader_params = {
     'batch_size': batch_sze,
     'drop_last': False,
@@ -30,7 +30,7 @@ dataloader_params = {
 def test_TimeSeries():
     series_class = TimeSeries(series, smooth_params, scaling, train_size)
     assert len(series_class.series) == N - N_smooth//2*2
-    assert len(series_class.tSrain) == int(train_size * N)
+    assert len(series_class.train) == int(train_size * N)
     assert len(series_class.test) == int((1-train_size) * N)
     assert len(series_class.train_smooth) == len(series_class.train)
     assert len(series_class.test_smooth) == len(series_class.test)
@@ -45,5 +45,9 @@ def test_TimeSeries():
     for x, y in trainloader:
         assert x.shape == (batch_size,training_window,1)
         break
+
+
+def test_TimeSeriesSTFT():
+    pass
     
     

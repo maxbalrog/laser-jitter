@@ -6,7 +6,7 @@ setup(
     name='laser_jitter',
     version=__version__,
 
-    url='https://github.com/maxbalrog/laser_jitter',
+    url='https://github.com/maxbalrog/laser-jitter',
     author='Maksim Valialshchikov',
     author_email='maksim.valialshchikov@uni-jena.de',
 

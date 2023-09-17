@@ -14,7 +14,8 @@ from laser_jitter.utils import read_yaml, write_yaml
 from laser_jitter.train import train_model, train_model_real_imag, train_model_ensemble
 from laser_jitter.inference import calculate_metrics
 
-__all__ = ['RNN_abc', 'RNNTemporal', 'RNNSTFT', 'RNNSTFTInTimeOut', 'RNNSTFT_real_imag']
+__all__ = ['RNN_abc', 'RNNTemporal', 'RNNSTFT', 'RNNSTFTInTimeOut', 'RNNSTFT_real_imag',
+           'RNNSTFT_ensemble']
 
 
 class RNN_abc:
@@ -130,7 +131,6 @@ class RNNTemporal(RNN_abc):
         actuals = torch.cat(actuals).squeeze()
         actuals_smooth = torch.cat(actuals_smooth).squeeze()
         metrics = calculate_metrics(predictions.flatten(), actuals.flatten())
-        # print(predictions.shape, actuals.shape, actuals_smooth.shape)
 
         n_batches, prediction_window = predictions.shape
         predictions = series_class.inverse_transform_series(predictions.flatten())
@@ -167,7 +167,6 @@ class RNNSTFT(RNN_abc):
         load_model: [True/False] - whether to load model from `save_folder`
         '''
         super().__init__(model_params, model, save_folder, load_model, SEED)
-        # self.n_out_features = model_params['n_out_features']
 
     def predict(self, x):
         with torch.no_grad():
@@ -254,14 +253,11 @@ class RNNSTFTInTimeOut(RNNSTFT):
         stft_loader = create_dataloader_stft_time(series, stft_series, sequence_params,
                                                   dataloader_params, stft_params, shuffle=False)
         predictions = []
-        # predictions, actuals = [], []
         for x,y in stft_loader:
             batch_size = x.shape[0]
             prediction = self.predict(x.to(self.device)).cpu().numpy()
             predictions.append(prediction.flatten())
-            # actuals.append(y.flatten())
 
-        # actuals = np.array(actuals)
         predictions = np.concatenate(predictions)
         predictions = series_class.scaler.inverse_transform(predictions[:,None]).squeeze()
         predictions = predictions.reshape(actuals.shape)

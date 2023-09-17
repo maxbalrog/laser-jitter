@@ -106,6 +106,10 @@ def test_TimeSeriesSTFT():
         break
 
 
+def test_TimeSeriesInSTFTOutTime():
+    pass
+
+
 def test_generate_sequences():
     for step in [1,10]:
         sequences, targets = generate_sequences(series, training_window,
@@ -137,6 +141,15 @@ def test_create_dataloader():
         assert x.shape == (batch_size,training_window)
         assert y.shape == (batch_size,prediction_window)
         break
+
+
+def test_generate_sequences_stft_time():
+    pass
     
-    
+
+def test_create_dataloader_stft_time():
+    pass
+
+
+
     

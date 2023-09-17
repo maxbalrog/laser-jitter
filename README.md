@@ -5,12 +5,37 @@ The package provides with a number of helper classes for time-series data pre-pr
 2. STFT
 
 ## Temporal models
-Given time-series (past time steps), predict a certain amount of future time steps. Preprocessing includes smoothing and scaling.
+Given time-series (past time steps), predict a certain amount of future time steps. Preprocessing includes smoothing (optional) and scaling.
 
 <img src="figures/temporal_model.png" alt="drawing" width="600"/>
 
 ## STFT models
+Transform given time-series with Short Time Fourier Transform to spectrogram, filter non-dominant frequencies and scale them. Use NNs to predict future variation of real/imag part of each frequency band. Possible options: 1) one model to predict real/imag part for all frequency bands, 2) one model to predict real part for all frequency bands, another to predict imaginary part, 3) separate model for each frequency band.
+
+<img src="figures/stft_model.png" alt="drawing" width="600"/>
 
 ## Installation
+
+Create conda environment and activate it, e.g.,
+```bash
+conda create -n laser-jitter python=3.10
+conda activate laser-jitter
+```
+
+Install required packages
+```bash
+pip install -r requirements.txt
+```
+
+Install laser-jitter package
+```bash
+pip install git+https://github.com/maxbalrog/laser-jitter.git
+```
+
+Run tests to check everything runs as expected
+```bash
+python -m pytest laser-jitter/tests/
+```
+
 
 

@@ -15,7 +15,5 @@ setup(
     install_requires=[
     'pytest>=4',
     'pytest-cov>=2',
-    'torch',
-    'scikit-learn'
     ]
 )

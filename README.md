@@ -1,6 +1,6 @@
 # Predict spatial laser jitter with NNs
 
-The package provides with a number of helper classes for time-series data pre-processing and model training/inference. Currently supported data classes and models:
+The package provides with a number of helper classes for time-series data pre-processing and model training/inference. Currently supported data classes and models (find details in [usage notebook](usage.ipynb)):
 1. Temporal
 2. STFT
 
@@ -15,6 +15,10 @@ Transform given time-series with Short Time Fourier Transform to spectrogram, fi
 <img src="figures/stft_model.png" alt="drawing" width="600"/>
 
 ## Installation
+Clone the repository
+```bash
+git clone https://github.com/maxbalrog/laser-jitter.git
+```
 
 Create conda environment and activate it, e.g.,
 ```bash
@@ -36,6 +40,13 @@ Run tests to check everything runs as expected
 ```bash
 python -m pytest laser-jitter/tests/
 ```
+
+## TODO
+- Add attention architecture
+- Add hyperparameter optimization module
+
+## Acknowledgements
+Paper: in progress...
 
 
 

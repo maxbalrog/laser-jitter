@@ -7,7 +7,7 @@ The package provides with a number of helper classes for time-series data pre-pr
 ## Temporal models
 Given time-series (past time steps), predict a certain amount of future time steps. Preprocessing includes smoothing and scaling.
 
-![image](figures/problem_setting_forecast.png)
+![image](figures/temporal_model.png)
 
 ## STFT models
 

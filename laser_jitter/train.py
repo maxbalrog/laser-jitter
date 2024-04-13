@@ -11,7 +11,7 @@ from laser_jitter.utils import fix_seed
 __all__ = ['train_model', 'train_model_real_imag', 'train_model_ensemble']
 
     
-def train_model(model, trainloader, testloader, criterion, optimizer,
+def train_model(model, trainloader, testloader, criterion, optimizer, scheduler=None,
                 n_epochs=50, SEED=23, save_path='models/rnn.pth', device='cpu', verbose=True,
                 model_params=None):
     '''
@@ -67,7 +67,8 @@ def train_model(model, trainloader, testloader, criterion, optimizer,
         if valid_loss_mean < best_valid_loss:
             best_valid_loss = valid_loss_mean
             torch.save(model.state_dict(), save_path)
-
+        if scheduler:
+            scheduler.step()
         if verbose:
             print(f'{epoch} - train: {train_loss_mean}, valid: {valid_loss_mean}')
     return t_losses, v_losses
@@ -132,7 +133,8 @@ def train_model_real_imag(models, trainloader, testloader, criterion, optimizers
             if valid_loss_mean[i] < best_valid_loss[i]:
                 best_valid_loss[i] = valid_loss_mean[i]
                 torch.save(models[i].state_dict(), save_path[i])
-
+        # if scheduler:
+        #     scheduler.step()
         if verbose:
             print(f'{epoch} - train: {train_loss_mean.mean()}, valid: {valid_loss_mean.mean()}')
     return t_losses, v_losses
@@ -197,7 +199,8 @@ def train_model_ensemble(models, trainloader, testloader, criterion, optimizers,
             if valid_loss_mean[i] < best_valid_loss[i]:
                 best_valid_loss[i] = valid_loss_mean[i]
                 torch.save(models[i].state_dict(), save_path[i])
-
+        # if scheduler:
+        #     scheduler.step()
         if verbose:
             print(f'{epoch} - train: {train_loss_mean.mean()}, valid: {valid_loss_mean.mean()}')
     return t_losses, v_losses

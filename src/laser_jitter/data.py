@@ -4,6 +4,7 @@ Data classes for time series analysis and functions for creating dataloaders
 
 import numpy as np
 from scipy.signal import stft, istft
+from scipy.ndimage import convolve1d
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 import torch
@@ -36,7 +37,9 @@ class TimeSeries:
         self.smooth_split_and_scale()
 
     def smooth(self, series):
-        series_smooth = np.convolve(series, self.smooth_params['kernel'], mode='valid')
+        N = len(self.smooth_params['kernel'])
+        series_smooth = convolve1d(series, self.smooth_params['kernel'], mode='nearest', axis=0)
+        series_smooth = series_smooth[N//2:len(self.series)-N//2]
         return series_smooth
 
     def train_test_split(self, series):

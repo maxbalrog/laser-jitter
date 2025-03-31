@@ -3,3 +3,4 @@ __pycache__
 models/*
 data/*
 laser_jitter.egg-info/*
+*/laser_jitter.egg-info/*

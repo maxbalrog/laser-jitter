@@ -4,6 +4,7 @@ Data classes for time series analysis and functions for creating dataloaders
 
 import numpy as np
 from scipy.signal import stft, istft
+from scipy.ndimage import convolve1d
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 import torch
@@ -32,11 +33,16 @@ class TimeSeries:
         but you passed {scaling}"
         self.scaling = scaling
         self.train_size = train_size
+        
+        if self.smooth_params:
+            self.N = len(self.smooth_params['kernel'])
+            self.dN = self.N // 2
 
         self.smooth_split_and_scale()
 
     def smooth(self, series):
-        series_smooth = np.convolve(series, self.smooth_params['kernel'], mode='valid')
+        series_smooth = convolve1d(series, self.smooth_params['kernel'], mode='nearest', axis=0)
+        series_smooth = series_smooth[self.dN:len(series)-self.dN]
         return series_smooth
 
     def train_test_split(self, series):
@@ -73,8 +79,7 @@ class TimeSeries:
 
             # Cut out smooth boundary region from unsmoothed timeseries
             # (useful for metric computation and comparison between smoothed and non-smoothed cases)
-            N = len(self.smooth_params['kernel'])
-            self.series = self.series[N//2:len(self.series)-N//2]
+            self.series = self.series[self.dN:len(self.series)-self.dN]
 
         data = self.split_and_scale(self.series)
         self.train, self.test, self.scaler = data.values()
@@ -92,10 +97,13 @@ class TimeSeries:
     def transform_series(self, series):
         if self.smooth_params is not None:
             series_smooth = self.smooth(series)
-            series_smooth = self.scaler_smooth.transform(series_smooth[:, np.newaxis])
-            N = len(self.smooth_params['kernel'])
-            series = series[N//2:len(series)-N//2]
-        series = self.scaler.transform(series[:, np.newaxis])
+            if series_smooth.ndim == 1:
+                series_smooth = series_smooth[:, np.newaxis]
+            series_smooth = self.scaler_smooth.transform(series_smooth)
+            series = series[self.dN:len(series)-self.dN]
+        if series.ndim == 1:
+            series = series[:, np.newaxis]
+        series = self.scaler.transform(series)
         return series, series_smooth
 
     def inverse_transform_series(self, series, scaler=None):

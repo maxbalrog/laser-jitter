@@ -95,15 +95,21 @@ class TimeSeries:
         return trainloader, testloader
 
     def transform_series(self, series):
+        print("Entering `transform_series`...")
+        print(f"Series shape: {series.shape}")
         if self.smooth_params is not None:
             series_smooth = self.smooth(series)
+            print(f"Smooth shape: {series_smooth.shape}")
             if series_smooth.ndim == 1:
                 series_smooth = series_smooth[:, np.newaxis]
             series_smooth = self.scaler_smooth.transform(series_smooth)
+            print(f"Smooth shape: {series_smooth.shape}")
             series = series[self.dN:len(series)-self.dN]
+            print(f"Series shape: {series.shape}")
         if series.ndim == 1:
             series = series[:, np.newaxis]
         series = self.scaler.transform(series)
+        print(f"Series shape: {series.shape}")
         return series, series_smooth
 
     def inverse_transform_series(self, series, scaler=None):

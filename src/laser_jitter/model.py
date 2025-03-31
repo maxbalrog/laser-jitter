@@ -145,7 +145,9 @@ class RNNTemporal(RNN_abc):
         return (predictions, actuals, actuals_smooth), metrics
 
     def predict_on_series(self, series, series_class, device='cuda'):
+        print(series.shape)
         series, series_smooth = series_class.transform_series(series)
+        print(series.shape, series_smooth.shape)
         seq_len = len(series_smooth)
         n_features = 1 if series.ndim == 1 else series.shape[1]
  

@@ -15,6 +15,7 @@ dependencies = [
     "torchvision",
     "tqdm",
     "pyyaml",
+    "pytest",
 ]
 requires-python = ">=3.12"
 authors = [

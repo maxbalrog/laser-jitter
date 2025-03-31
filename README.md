@@ -20,21 +20,23 @@ Clone the repository
 git clone https://github.com/maxbalrog/laser-jitter.git
 ```
 
-Create conda environment and activate it, e.g.,
+Create micromamba environment and activate it, e.g.,
 ```bash
-conda create -n laser-jitter python=3.10
-conda activate laser-jitter
+micromamba create -n laser-jitter python=3.12
+micromamba activate laser-jitter
 ```
 
-Install required packages
+Install the package in editable mode (specify path to the cloned repo)
 ```bash
-pip install -r requirements.txt
+pip install -e laser-jitter
 ```
 
-Install laser-jitter package
+Alternatively, install laser-jitter package from github repository (but the package would be unmodifiable)
 ```bash
 pip install git+https://github.com/maxbalrog/laser-jitter.git
 ```
+
+(Optional)
 
 Run tests to check everything runs as expected
 ```bash

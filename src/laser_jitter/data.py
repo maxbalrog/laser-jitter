@@ -100,7 +100,9 @@ class TimeSeries:
             series_smooth = self.scaler_smooth.transform(series_smooth)
             N = len(self.smooth_params['kernel'])
             series = series[N//2:len(series)-N//2]
-        series = self.scaler.transform(series[:, np.newaxis])
+        if series.ndim == 1:
+            series = series[:, np.newaxis]
+        series = self.scaler.transform(series)
         return series, series_smooth
 
     def inverse_transform_series(self, series, scaler=None):

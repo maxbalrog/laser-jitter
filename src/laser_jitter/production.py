@@ -50,7 +50,7 @@ def get_default_model_params(n_features, n_lookback, n_forecast):
     n_hidden_lstm = 64
     model_params = {
         'n_features': n_features,
-        'n_hidden_lstm': n_hidden_lstm,
+        'n_hidden_lstm': n_hidden_lstm*n_features,
         'n_hidden_fc': 1000*n_features,
         'n_outputs': n_forecast*n_features,
         'n_out_features': n_features,

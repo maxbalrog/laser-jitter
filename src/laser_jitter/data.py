@@ -95,7 +95,9 @@ class TimeSeries:
     def transform_series(self, series):
         if self.smooth_params is not None:
             series_smooth = self.smooth(series)
-            series_smooth = self.scaler_smooth.transform(series_smooth[:, np.newaxis])
+            if series_smooth.ndim == 1:
+                series_smooth = series_smooth[:, np.newaxis]
+            series_smooth = self.scaler_smooth.transform(series_smooth)
             N = len(self.smooth_params['kernel'])
             series = series[N//2:len(series)-N//2]
         series = self.scaler.transform(series[:, np.newaxis])

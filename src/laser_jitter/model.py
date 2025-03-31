@@ -151,6 +151,7 @@ class RNNTemporal(RNN_abc):
  
         x = torch.Tensor(series_smooth.reshape((1,seq_len,n_features))).to(device)
         prediction = self.predict(x).cpu().numpy()
+        prediction = prediction.reshape((self.prediction_window,n_features))
         prediction = series_class.inverse_transform_series(prediction)
         return prediction
 

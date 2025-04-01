@@ -14,7 +14,7 @@ from laser_jitter.model_basic import LSTMForecaster
 from laser_jitter.model import RNNTemporal
 
 
-def get_datasets(series, series_params, dataset_params):
+def get_one_dataset(series, series_params, dataset_params):
     """
     Create datasets from given series and parameters.
 
@@ -42,7 +42,27 @@ def get_datasets(series, series_params, dataset_params):
                                               series_class.test_smooth,
                                               sequence_params, dataloader_params)
     trainloader, testloader = loaders
-    return series_class, trainloader, testloader
+    dataset = {
+        "series_class": series_class,
+        "trainloader": trainloader,
+        "testloader": testloader,
+    }
+    return dataset
+
+
+def get_datasets(series, series_params, dataset_params, separate_channels=True):
+    """
+    Create datasets from given series and parameters.
+    """
+    if separate_channels:
+        datasets = []
+        for i in range(series.shape[1]):
+            series_i = series[:, i]
+            dataset = get_one_dataset(series_i, series_params, dataset_params)
+            datasets.append(dataset)
+    else:
+        datasets = [get_one_dataset(series, series_params, dataset_params)]
+    return datasets
 
 
 def get_default_model_params(n_features, n_lookback, n_forecast):
@@ -63,7 +83,7 @@ def get_default_model_params(n_features, n_lookback, n_forecast):
     return model_params
 
 
-def get_model(model_params, save_folder, create_model=True):
+def get_one_model(model_params, save_folder, create_model=True):
     """
     Create a model from given parameters.
 
@@ -85,6 +105,27 @@ def get_model(model_params, save_folder, create_model=True):
     return model_high_level
 
 
+def get_models(model_params, save_folder, create_model=True, separate_channels=True):
+    """
+    Create models from given parameters.
+
+    Parameters
+    ----------
+    model_params : dict
+        Parameters for the model.
+    save_folder : str
+        The folder where the model will be saved.
+    """
+    models = []
+    if separate_channels:
+        for i in range(model_params['n_features']):
+            models.append(get_one_model(model_params, os.path.join(save_folder, f"model_{i}"),
+                                        create_model))
+    else:
+        models.append(get_one_model(model_params, save_folder, create_model))
+    return models
+
+
 def plot_losses(losses, save_folder):
     plt.figure(figsize=(16,6))
     for i,title in enumerate(['Train', 'Test']):
@@ -102,7 +143,7 @@ def plot_losses(losses, save_folder):
     plt.show()
 
 
-def train_model(model, trainloader, testloader, save_folder, n_epochs=10, lr=1e-4,
+def train_model(model, dataset, save_folder, n_epochs=10, lr=1e-4,
                 verbose=False):
     """
     Train the model.
@@ -123,6 +164,8 @@ def train_model(model, trainloader, testloader, save_folder, n_epochs=10, lr=1e-
     use_cuda = torch.cuda.is_available()
     device = 'cuda' if use_cuda else 'cpu'
 
+    trainloader, testloader = dataset["trainloader"], dataset["testloader"]
+
     criterion = nn.MSELoss().to(device)
     optimizer = torch.optim.AdamW(model.model.parameters(), lr=lr)
 
@@ -138,4 +181,12 @@ def train_model(model, trainloader, testloader, save_folder, n_epochs=10, lr=1e-
 
     print(f"Model is trained. Saving the best model to {save_folder}.")
 
-    
+
+def train_models(models, datasets, save_folder, n_epochs=10, lr=1e-4,
+                 verbose=False, separate_channels=True):
+    for i,(model,dataset) in enumerate(zip(models, datasets)):
+        save_local = os.path.join(save_folder, f"model_{i}") if separate_channels else save_folder
+        train_model(model, dataset, save_local, n_epochs=n_epochs, lr=lr,
+                    verbose=verbose)
+    print("All models are trained...")
+

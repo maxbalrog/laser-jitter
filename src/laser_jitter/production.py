@@ -105,7 +105,8 @@ def get_one_model(model_params, save_folder, create_model=True):
     return model_high_level
 
 
-def get_models(model_params, save_folder, create_model=True, separate_channels=True):
+def get_models(model_params, save_folder, create_model=True, separate_channels=True,
+               n_channels=2):
     """
     Create models from given parameters.
 
@@ -118,7 +119,7 @@ def get_models(model_params, save_folder, create_model=True, separate_channels=T
     """
     models = []
     if separate_channels:
-        for i in range(model_params['n_features']):
+        for i in range(n_channels):
             models.append(get_one_model(model_params, os.path.join(save_folder, f"model_{i}"),
                                         create_model))
     else:

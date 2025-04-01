@@ -36,7 +36,7 @@ class RNN_abc:
        
         # make sure that directory for saving the model exists
         if not load_model:
-            Path(os.path.dirname(save_folder)).mkdir(parents=True, exist_ok=True)
+            Path(os.path.dirname(self.save_path)).mkdir(parents=True, exist_ok=True)
             self.save_model_params()
         
         if model is None:

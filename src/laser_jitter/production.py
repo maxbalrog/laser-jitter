@@ -190,3 +190,12 @@ def train_models(models, datasets, save_folder, n_epochs=10, lr=1e-4,
                     verbose=verbose)
     print("All models are trained...")
 
+
+def predict_on_series(series, models, datasets, device='cuda'):
+    predictions = []
+    for i,(model,dataset) in enumerate(zip(models,datasets)):
+        series_local = series[:,i] if len(models) > 1 else series
+        prediction = model.predict_on_series(series_local, dataset['series_class'],
+                                             device=device)
+        predictions.append(prediction)
+    return np.vstack(predictions).T

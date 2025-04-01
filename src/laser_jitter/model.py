@@ -65,7 +65,7 @@ class RNN_abc:
         return n_files > 0
 
     def create_save_path(self):
-        self.save_path = self.save_folder + 'model.pth'
+        self.save_path = os.path.join(self.save_folder, 'model.pth')
 
     def create_model(self):
         self.model = LSTMForecaster(**self.model_params).to(self.device)
